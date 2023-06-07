@@ -48,6 +48,43 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db("photographyDB").collection("users");
+    // const verifyAdmin = async (req, res, next) => {
+    //   const email = req.decoded.email;
+    //   //console.log("verify", email);
+    //   const query = { email: email };
+    //   const user = await usersCollection.findOne(query);
+    //   //console.log("user", user);
+    //   if (user?.role !== "admin") {
+    //     return res
+    //       .status(403)
+    //       .send({ error: true, message: "forbidden message" });
+    //   }
+    //   next();
+    // };
+    ///admin middelware
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      if (user?.role !== "admin") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
+
+    //instructor
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      if (user?.role !== "instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+    };
 
     //jwt
     app.post("/jwt", (req, res) => {
@@ -62,7 +99,7 @@ async function run() {
     app.post("/users", async (req, res) => {
       const { userInfo } = req.body;
 
-      console.log(userInfo);
+      //console.log(userInfo);
       const query = { email: userInfo.email };
       const existingEmail = await userCollection.findOne(query);
       if (existingEmail) {
@@ -79,6 +116,13 @@ async function run() {
         .find()
         .sort({ created_at: -1 })
         .toArray();
+      res.send(result);
+    });
+
+    app.delete("/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -101,7 +145,7 @@ async function run() {
     app.patch("/user/admin/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      console.log(filter);
+      //console.log(filter);
       const options = { upsert: true };
       const upDoc = {
         $set: {
@@ -112,9 +156,13 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/user/:email", async (req, res) => {
+    app.get("/user/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      //console.log(email);
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ error: true, message: "forbidden user" });
+      }
+      console.log("role", email);
       const query = { email: email };
       const user = await userCollection.findOne(query);
       const admin = { admin: user?.role === "admin" };
