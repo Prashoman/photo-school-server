@@ -8,6 +8,26 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+//verify jwt
+const verifyJWT = (req, res, next) => {
+  const authorization = req.header.authorization;
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: "UnAuthorized User" });
+  }
+  const token = authorization.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ error: true, message: "UnAuthorized User" });
+  }
+  jwt.verify(token, process.env.JWT_TOKEN_SECRET, (error, decoded) => {
+    if (error) {
+      return res
+        .status(401)
+        .send({ error: true, message: "UnAuthorized User" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.5onzxss.mongodb.net/?retryWrites=true&w=majority`;
 
