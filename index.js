@@ -10,7 +10,9 @@ app.use(express.json());
 
 //verify jwt
 const verifyJWT = (req, res, next) => {
-  const authorization = req.header.authorization;
+  //console.log(req.headers);
+  const authorization = req.headers.authorization;
+  //console.log(authorization);
   if (!authorization) {
     return res.status(401).send({ error: true, message: "UnAuthorized User" });
   }
@@ -28,7 +30,7 @@ const verifyJWT = (req, res, next) => {
     next();
   });
 };
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.5onzxss.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -56,13 +58,14 @@ async function run() {
       res.send({ jwtToken });
     });
 
+    //users
     app.post("/users", async (req, res) => {
       const { userInfo } = req.body;
 
       console.log(userInfo);
-      const query = { user: userInfo.user };
-      const existinguser = await userCollection.findOne(query);
-      if (existinguser) {
+      const query = { email: userInfo.email };
+      const existingEmail = await userCollection.findOne(query);
+      if (existingEmail) {
         return res.send({ message: "user already exists" });
       }
 
@@ -70,13 +73,54 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, async (req, res) => {
       //const query = { $sort: { created_at: 1 } };
       const result = await userCollection
         .find()
         .sort({ created_at: -1 })
         .toArray();
       res.send(result);
+    });
+
+    //create an instructor
+    app.patch("/user/instructor/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const upDoc = {
+        $set: {
+          role: "instructor",
+        },
+      };
+      const result = await userCollection.updateOne(filter, upDoc, options);
+      res.send(result);
+    });
+
+    //create an admin
+    app.patch("/user/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      console.log(filter);
+      const options = { upsert: true };
+      const upDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await userCollection.updateOne(filter, upDoc, options);
+      res.send(result);
+    });
+
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      //console.log(email);
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const admin = { admin: user?.role === "admin" };
+      const student = { student: user?.role === "student" };
+      const instructor = { instructor: user?.role === "instructor" };
+      res.send({ admin, student, instructor });
     });
 
     // Send a ping to confirm a successful connection
