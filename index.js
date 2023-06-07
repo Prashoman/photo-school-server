@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -26,13 +27,22 @@ async function run() {
 
     const userCollection = client.db("photographyDB").collection("users");
 
+    //jwt
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const jwtToken = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ jwtToken });
+    });
+
     app.post("/users", async (req, res) => {
       const { userInfo } = req.body;
 
       console.log(userInfo);
-      const query = { email: userInfo.email };
-      const existingEmail = await userCollection.findOne(query);
-      if (existingEmail) {
+      const query = { user: userInfo.user };
+      const existinguser = await userCollection.findOne(query);
+      if (existinguser) {
         return res.send({ message: "user already exists" });
       }
 
