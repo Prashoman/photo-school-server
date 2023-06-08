@@ -48,19 +48,7 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db("photographyDB").collection("users");
-    // const verifyAdmin = async (req, res, next) => {
-    //   const email = req.decoded.email;
-    //   //console.log("verify", email);
-    //   const query = { email: email };
-    //   const user = await usersCollection.findOne(query);
-    //   //console.log("user", user);
-    //   if (user?.role !== "admin") {
-    //     return res
-    //       .status(403)
-    //       .send({ error: true, message: "forbidden message" });
-    //   }
-    //   next();
-    // };
+
     ///admin middelware
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
@@ -85,6 +73,12 @@ async function run() {
           .send({ error: true, message: "forbidden message" });
       }
     };
+
+    app.get("/instructors", async (req, res) => {
+      const query = { role: "instructor" };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
 
     //jwt
     app.post("/jwt", (req, res) => {
@@ -162,7 +156,7 @@ async function run() {
       if (email !== req.decoded.email) {
         return res.status(403).send({ error: true, message: "forbidden user" });
       }
-      console.log("role", email);
+      //console.log("role", email);
       const query = { email: email };
       const user = await userCollection.findOne(query);
       const admin = { admin: user?.role === "admin" };
