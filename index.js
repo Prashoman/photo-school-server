@@ -48,6 +48,7 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db("photographyDB").collection("users");
+    const classCollection = client.db("photographyDB").collection("classes");
 
     ///admin middelware
     const verifyAdmin = async (req, res, next) => {
@@ -80,6 +81,13 @@ async function run() {
       res.send(result);
     });
 
+    //add an class
+
+    app.post("/class/add", async (req, res) => {
+      const classInfo = req.body;
+      const result = await classCollection.insertOne(classInfo);
+      res.send(result);
+    });
     //jwt
     app.post("/jwt", (req, res) => {
       const user = req.body;
