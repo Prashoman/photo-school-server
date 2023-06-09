@@ -73,21 +73,9 @@ async function run() {
           .status(403)
           .send({ error: true, message: "forbidden message" });
       }
+      next();
     };
 
-    app.get("/instructors", async (req, res) => {
-      const query = { role: "instructor" };
-      const result = await userCollection.find(query).toArray();
-      res.send(result);
-    });
-
-    //add an class
-
-    app.post("/class/add", async (req, res) => {
-      const classInfo = req.body;
-      const result = await classCollection.insertOne(classInfo);
-      res.send(result);
-    });
     //jwt
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -95,6 +83,41 @@ async function run() {
         expiresIn: "1h",
       });
       res.send({ jwtToken });
+    });
+
+    app.get("/instructors", async (req, res) => {
+      const query = { role: "instructor" };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get(
+      "/classes/:email",
+      verifyJWT,
+      verifyInstructor,
+      async (req, res) => {
+        const email = req.params.email;
+        //console.log(req.decoded.email);
+
+        if (email !== req.decoded.email) {
+          return res
+            .status(403)
+            .send({ error: true, message: "forbidden user" });
+        }
+
+        const result = await classCollection
+          .find()
+          .sort({ created_at: -1 })
+          .toArray();
+        res.send(result);
+      }
+    );
+    //add an class
+
+    app.post("/class/add", async (req, res) => {
+      const classInfo = req.body;
+      const result = await classCollection.insertOne(classInfo);
+      res.send(result);
     });
 
     //users
