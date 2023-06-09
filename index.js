@@ -31,6 +31,7 @@ const verifyJWT = (req, res, next) => {
   });
 };
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const res = require("express/lib/response");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.5onzxss.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -90,6 +91,10 @@ async function run() {
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
+    app.get("/classes", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await classCollection.find().toArray();
+      res.send(result);
+    });
 
     app.get(
       "/classes/:email",
@@ -104,19 +109,85 @@ async function run() {
             .status(403)
             .send({ error: true, message: "forbidden user" });
         }
-
+        const query = { instructorEmail: email };
         const result = await classCollection
-          .find()
+          .find(query)
           .sort({ created_at: -1 })
           .toArray();
         res.send(result);
       }
     );
+    //admin update status
+    app.patch("/status/approve/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const upDoc = {
+        $set: {
+          status: "approve",
+        },
+      };
+      const result = await classCollection.updateOne(filter, upDoc, options);
+      res.send(result);
+    });
+    app.patch("/status/deny/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const upDoc = {
+        $set: {
+          status: "deny",
+        },
+      };
+      const result = await classCollection.updateOne(filter, upDoc, options);
+      res.send(result);
+    });
+    app.patch("/feedback/:id", async (req, res) => {
+      const id = req.params.id;
+      const feedbackInfo = req.body.feedback;
+
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const upDoc = {
+        $set: {
+          feedback: feedbackInfo,
+        },
+      };
+      const result = await classCollection.updateOne(filter, upDoc, options);
+      res.send(result);
+    });
     //add an class
 
     app.post("/class/add", async (req, res) => {
       const classInfo = req.body;
       const result = await classCollection.insertOne(classInfo);
+      res.send(result);
+    });
+    app.patch("/class/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateClassInfo = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const upDoc = {
+        $set: {
+          ...updateClassInfo,
+        },
+      };
+      const result = await classCollection.updateOne(filter, upDoc, options);
+      res.send(result);
+    });
+
+    app.delete("/class/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await classCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.get("/class/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await classCollection.findOne(query);
       res.send(result);
     });
 
