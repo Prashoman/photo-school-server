@@ -51,6 +51,7 @@ async function run() {
     const userCollection = client.db("photographyDB").collection("users");
     const classCollection = client.db("photographyDB").collection("classes");
     const sliderCollection = client.db("photographyDB").collection("sliders");
+    const cartCollection = client.db("photographyDB").collection("carts");
 
     ///admin middelware
     const verifyAdmin = async (req, res, next) => {
@@ -118,6 +119,8 @@ async function run() {
         res.send(result);
       }
     );
+
+    //get instructor
     //admin update status
     app.patch("/status/approve/:id", async (req, res) => {
       const id = req.params.id;
@@ -292,6 +295,30 @@ async function run() {
     //the all slider info get
     app.get("/sliders", async (req, res) => {
       const result = await sliderCollection.find().toArray();
+      res.send(result);
+    });
+
+    //cart all api
+    app.get("/cart", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        return res.send([]);
+      }
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { userEmail: email };
+      const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/cart/class", async (req, res) => {
+      const cartInfo = req.body;
+      //console.log(cartInfo);
+      const result = await cartCollection.insertOne(cartInfo);
       res.send(result);
     });
 
