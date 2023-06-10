@@ -50,6 +50,7 @@ async function run() {
 
     const userCollection = client.db("photographyDB").collection("users");
     const classCollection = client.db("photographyDB").collection("classes");
+    const sliderCollection = client.db("photographyDB").collection("sliders");
 
     ///admin middelware
     const verifyAdmin = async (req, res, next) => {
@@ -168,7 +169,7 @@ async function run() {
     app.patch("/class/:id", async (req, res) => {
       const id = req.params.id;
       const updateClassInfo = req.body;
-      console.log(updateClassInfo);
+      // console.log(updateClassInfo);
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const upDoc = {
@@ -286,6 +287,12 @@ async function run() {
       const student = { student: user?.role === "student" };
       const instructor = { instructor: user?.role === "instructor" };
       res.send({ admin, student, instructor });
+    });
+
+    //the all slider info get
+    app.get("/sliders", async (req, res) => {
+      const result = await sliderCollection.find().toArray();
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
