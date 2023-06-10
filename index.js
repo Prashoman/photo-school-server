@@ -163,9 +163,12 @@ async function run() {
       const result = await classCollection.insertOne(classInfo);
       res.send(result);
     });
+
+    //update class
     app.patch("/class/:id", async (req, res) => {
       const id = req.params.id;
       const updateClassInfo = req.body;
+      console.log(updateClassInfo);
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const upDoc = {
@@ -174,6 +177,24 @@ async function run() {
         },
       };
       const result = await classCollection.updateOne(filter, upDoc, options);
+      res.send(result);
+    });
+
+    //get all class and sorted by enroll
+
+    app.get("/all-classes-sort", async (req, res) => {
+      const query = { status: "approve" };
+      const result = await classCollection
+        .find(query)
+        .sort({ enroll: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/all-classes", async (req, res) => {
+      const query = { status: "approve" };
+      const result = await classCollection.find(query).toArray();
       res.send(result);
     });
 
