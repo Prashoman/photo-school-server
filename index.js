@@ -4,6 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -52,6 +53,7 @@ async function run() {
     const classCollection = client.db("photographyDB").collection("classes");
     const sliderCollection = client.db("photographyDB").collection("sliders");
     const cartCollection = client.db("photographyDB").collection("carts");
+    const paymentCollection = client.db("photographyDB").collection("payments");
 
     ///admin middelware
     const verifyAdmin = async (req, res, next) => {
@@ -315,6 +317,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/cart/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.findOne(query);
+      res.send(result);
+    });
+
     app.post("/cart/class", async (req, res) => {
       const cartInfo = req.body;
       //console.log(cartInfo);
@@ -327,6 +336,55 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
+    });
+
+    //payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      //console.log(am);
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payments", async (req, res) => {
+      const paymentInfo = req.body;
+      //console.log(paymentInfo);
+
+      const classQuery = { _id: new ObjectId(paymentInfo.classId) };
+      const cartQuery = { _id: new ObjectId(paymentInfo.cartId) };
+      const classResult = await classCollection.findOne(classQuery);
+
+      const seats = classResult.seats - 1;
+      const enroll = classResult.enroll + 1;
+
+      //console.log("class", seats, enroll);
+      const options = { upsert: true };
+      const upClassDoc = {
+        $set: {
+          seats: seats,
+          enroll: enroll,
+        },
+      };
+
+      const updateClassResult = await classCollection.updateOne(
+        classQuery,
+        upClassDoc,
+        options
+      );
+      const deletedCartResult = await cartCollection.deleteOne(cartQuery);
+
+      const paymentResult = await paymentCollection.insertOne(paymentInfo);
+      res.send({ paymentResult, updateClassResult, deletedCartResult });
     });
 
     // Send a ping to confirm a successful connection
