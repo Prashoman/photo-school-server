@@ -264,6 +264,62 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/instructor/class-sort", async (req, res) => {
+      const query = { status: "approve" };
+
+      // const aggregationPipeline = [
+      //   {
+      //     $group: {
+      //       _id: {
+      //         instructorEmail: "$instructorEmail",
+      //         instructorName: "$instructorName",
+      //       },
+      //       enrollSum: { $sum: "$enroll" },
+      //     },
+      //   },
+      //   { $sort: { enrollSum: -1 } },
+      //   { $limit: 6 },
+      // ];
+
+      const aggregationPipeline = [
+        {
+          $group: {
+            _id: {
+              instructorEmail: "$instructorEmail",
+              instructorName: "$instructorName",
+              instructorImage: "$instructorImage",
+              seats: "$seats",
+            },
+            enrollSum: { $sum: "$enroll" },
+          },
+        },
+        { $sort: { enrollSum: -1 } },
+        { $limit: 6 },
+        {
+          $project: {
+            _id: 0,
+            instructorEmail: "$_id.instructorEmail",
+            instructorName: "$_id.instructorName",
+            instructorImage: "$_id.instructorImage",
+            seats: "$_id.seats",
+            enrollSum: 1,
+          },
+        },
+      ];
+
+      const topEnrollments = await classCollection
+        .aggregate(aggregationPipeline)
+        .toArray();
+
+      const result = await classCollection
+        .find(query)
+        .sort({ enroll: -1 })
+        .limit(6)
+        .toArray();
+      res.send(topEnrollments);
+      //res.send(result);
+    });
+
     //create an admin
     app.patch("/user/admin/:id", async (req, res) => {
       const id = req.params.id;
