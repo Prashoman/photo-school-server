@@ -387,6 +387,41 @@ async function run() {
       res.send({ paymentResult, updateClassResult, deletedCartResult });
     });
 
+    app.get("/payments", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (email !== req.decoded.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const result = await paymentCollection
+        .find(query)
+        .sort({ created_at: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/enroll/classes", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      if (email !== req.decoded.email) {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden access" });
+      }
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
+      //console.log(result.classId);
+      const classId = result.map((item) => item.classId);
+      const classQuery = {
+        _id: { $in: classId.map((id) => new ObjectId(id)) },
+      };
+      const classResult = await classCollection.find(classQuery).toArray();
+      //console.log(classResult);
+      res.send(classResult);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
