@@ -47,13 +47,14 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    //await client.connect();
 
     const userCollection = client.db("photographyDB").collection("users");
     const classCollection = client.db("photographyDB").collection("classes");
     const sliderCollection = client.db("photographyDB").collection("sliders");
     const cartCollection = client.db("photographyDB").collection("carts");
     const paymentCollection = client.db("photographyDB").collection("payments");
+    const reviewCollection = client.db("photographyDB").collection("reviews");
 
     ///admin middelware
     const verifyAdmin = async (req, res, next) => {
@@ -478,8 +479,15 @@ async function run() {
       res.send(classResult);
     });
 
+    //reviews
+
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    //await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
